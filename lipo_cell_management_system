@@ -1,0 +1,59 @@
+
+/*Outline of a script to measure and record the voltage of a 3.7 v 
+ * lipo cell with a 3.3v microcontroller. 
+ * 
+ * Eventually will be used to manage the charging of the battery, 
+ * and recording the value into a database
+ * 
+ * 
+ * 
+ *      >>> LiPo Cell Safety! <<<
+ *      
+ *      Vmax = 4.20 v
+ *      Vmin = 3.00 v  (Maintain 3.2/3.3 for safety)
+ *      
+ *      
+ *      Cell Capacity:
+ *      1000 mAh             
+ *      
+ *      1000 mAh * 3.7 v (Nominal) = 3.7 Wh 
+ *      
+ *      
+ *      Charging: *      
+ *      
+ *      C rating Note:
+ *      As a general rule, you should charge your batteries a current of 1C. 
+ *      So, for a 2200 mAh capacity battery, the charge rate should be 2.2 Amps 
+ *      and for a 1700 mAh capacity battery, the charge rate should be 1.7 Amps
+ *      
+ *      Current Draw:
+ *      3S 1000 mAh 20C LiPo pack, your safe max current draw would be 1000 mA x 20C = 20,000 mA or 20 A.
+ *      1S 1000 mAh 15C                  -           -             -   1000 mA x 15C = 15,000 mA or 15 A
+ *      
+ *      
+ *      So Current Draw for this Application:
+ *      
+ *      = X to be Measured
+ *      
+ *      at voltage 3.7 v
+ *      
+ *      X A * 3.7 v = 3.7X W
+ *      
+ *      = __________ h Operation time with no top up
+ *      
+ *      
+ */
+
+
+
+
+
+void setup() {
+  // put your setup code here, to run once:
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}
