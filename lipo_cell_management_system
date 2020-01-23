@@ -68,6 +68,17 @@
  *      
  */
 
+ /*
+  *     Required Functions:
+  *     
+  *     Battery Charging disconnect if over 4.2 v  (should be handled by daughterboard but may be worth reiterating
+  *     
+  *     Battery safety Disconnect if cell voltage drops under 3.1 v 
+  * 
+  * 
+  * 
+  */
+
 
 
 
