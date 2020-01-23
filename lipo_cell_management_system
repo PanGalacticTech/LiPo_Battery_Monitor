@@ -42,6 +42,30 @@
  *      = __________ h Operation time with no top up
  *      
  *      
+ *      
+ *      
+ *      Measurements Required:
+ *      
+ *      Vcell =    // voltage of the  Battery cell  3.0 to 4.2 range
+ *      
+ *      Vpv =    // Voltage of the Photovoltaic Cell 0 to 5.2 v (Check this)
+ *      
+ *      
+ *      These will both require voltage division in order to use the ADC on the microcontroller to detect the voltage.
+ *      
+ *      Microcontroller will be running on internal 3.3 v regulation, however this introduces inefficiency. 
+ *      Running from the cell output directly may be viable, however it will require using the ADC internal reference.
+ *      
+ *      Internal Reference on Arduino = 1.1 v  (Check)
+ *      
+ *      Therefore voltage division will need to bring both Vcell & Vpv down to max 1.1 v
+ *      
+ *      1.1/1023 = v per division. 
+ *      
+ *      This is the value to turn the result from the ADC back to a voltage readout.
+ *      
+ *      
+ *      
  */
 
 
