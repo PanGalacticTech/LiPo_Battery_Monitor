@@ -25,21 +25,46 @@
  *      As a general rule, you should charge your batteries a current of 1C. 
  *      So, for a 2200 mAh capacity battery, the charge rate should be 2.2 Amps 
  *      and for a 1700 mAh capacity battery, the charge rate should be 1.7 Amps
+ *                1000 mAh                                             1.0 Amps
  *      
  *      Current Draw:
  *      3S 1000 mAh 20C LiPo pack, your safe max current draw would be 1000 mA x 20C = 20,000 mA or 20 A.
  *      1S 1000 mAh 15C                  -           -             -   1000 mA x 15C = 15,000 mA or 15 A
  *      
  *      
+ *      
+ *      !!!!! >>>> USING 5v Booster to power sensor & ESP32 Board  <<<< !!!!!!! *      
+ *      
  *      So Current Draw for this Application:
  *      
- *      = X to be Measured
+ *      = 200 mA average from battery, 250 mA peak
  *      
- *      at voltage 3.7 v
+ *      at voltage 3.7 v (Nominal)
  *      
- *      X A * 3.7 v = 3.7X W
+ *      0.200 A * 3.7 v = 0.74 W
  *      
- *      = __________ h Operation time with no top up
+ *      = 5 h Operation time with no top up. Probably will not last the night
+ *      
+ *      Solar Panels:
+ *      Small: 0.66 W
+ *      Large: 0.87 W
+ *      
+ *      Large one should at least charge the battery during daylight hours.
+ *      
+ *      0.87 W / 5 v = 0.174 A or 174 mA avaliable from the large solar panel in direct sunlight. May have to measure on a cloudy day
+ *      to find actual voltage output
+ *      
+ *       *    
+ *      Using charge pump daughterboard that outputs 5v from the 3.7v LiPo Cell
+ *      
+ *      200 mA max draw from 5v output < 150 mA average
+ *      
+ *      Max 1 A draw from charge circuit, so this seems fine!
+ *      
+ *      1 A * 5v = 5 W power output max
+ *      
+ *      250 mA max draw from battery, 200 mA average.
+ *      
  *      
  *      
  *      
@@ -60,13 +85,59 @@
  *      
  *      Therefore voltage division will need to bring both Vcell & Vpv down to max 1.1 v
  *      
- *      1.1/1023 = v per division. 
+ *      1.1/1023 = 1.075x10^-3 v per division.  
+ *      
+ *      4.4/4 = 1.1 
+ *      
+ *      therefore
+ *      
+ *      voltage reading = 4.3 x 10^-3 v per division (translation) 0 to 1024
  *      
  *      This is the value to turn the result from the ADC back to a voltage readout.
  *      
  *      
+ *      to divide a max of 4.4 v to 1.1 v for the internal reference voltage. 
+ *      
+ *      we need a voltage dividor of 1/4 and this needs to have as low a current draw as possible.
+ *      
+ *      if we use a 100k ohm resistor for the GND connection, then a 420k ohm resistor for the BATTERY (4.4 v max overvoltage)
+ *      Using Calculator:
+ *      
+ *      33k ohm to +4.4 v 10k ohm to GND = Vout 1.023 v    0.2 mA Negligable 
+ *      
+ *           
+ *      
+ *      for the 5 v solar panel
+ *      5 v to 1.1 v 
+ *      
+ *      33k ohm to +5v 8.2k ohm to GND = Vout 0.995 v    0.2 mA
+ *      
+ *      
+ *      
+ *      >>> Test Load Required <<<     
+ *      
+ *      Vin = 5v
+ *      
+ *      mA output = 200 mA
+ *      
+ *      R = V/I
+ *      
+ *      R = 5/0.2 
+ *      
+ *      R = 25 ohm     
+ *      
+ *      5 x 0.2 = 1 W Power 
+ *      
+ *      Assume I dont have 1 W resistors, better assume 1/4 W max so 25 ohm becomes 100 ohm
+ *      
+ *      5v / 100 ohm = 0.05 A not enough to really test the circuit but it will let me test
+ *      the basic sketch
+ *      
+ *      
  *      
  */
+
+
 
  /*
   *     Required Functions:
@@ -81,14 +152,51 @@
 
 
 
+// ~~~~~~~~~~~~ Input Pins ~~~~~~~~~~~~~~~~~
+
+const int batteryPin = A7;
+
+
+
+// ~~~~~~~~~~~ Maths Variables ~~~~~~~~~~~~~~~~
+
+// Min and Max Voltages for Battery
+int Vmax = 4200;     // Multiplied by 100 to avoid float numbers
+int Vmin = 3200;     
+
+int Vbatt;   // int to hold the current measured voltage after calculations
+
+float Vdisplay;  int Vbatt value / 100 for printing to the display
+
+int Vreading;   // measured value from A7 pin. Between 0 - 1023 Need an algorithm to turn this into Vbatt.
+
+
+
+float Vscaler;   // float value used to scale Vreading to Vbatt
+
+float Voffset;   // offset value if required.
+
 
 
 void setup() {
-  // put your setup code here, to run once:
+
+pinMode(batteryPin, INPUT);
+
+// Set Up internal Reference of 1.1v
 
 }
 
+
+
 void loop() {
-  // put your main code here, to run repeatedly:
+
+// read batteryPin
+
+
+// Convert value to Vbatt
+
+
+// Convert to a value to display and Print to Screen
+
 
 }
