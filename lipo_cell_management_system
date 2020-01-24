@@ -1,202 +1,415 @@
 
-/*Outline of a script to measure and record the voltage of a 3.7 v 
- * lipo cell with a 3.3v microcontroller. 
- * 
- * Eventually will be used to manage the charging of the battery, 
- * and recording the value into a database
- * 
- * 
- * 
- *      >>> LiPo Cell Safety! <<<
- *      
- *      Vmax = 4.20 v
- *      Vmin = 3.00 v  (Maintain 3.2/3.3 for safety)
- *      
- *      
- *      Cell Capacity:
- *      1000 mAh             
- *      
- *      1000 mAh * 3.7 v (Nominal) = 3.7 Wh 
- *      
- *      
- *      Charging: *      
- *      
- *      C rating Note:
- *      As a general rule, you should charge your batteries a current of 1C. 
- *      So, for a 2200 mAh capacity battery, the charge rate should be 2.2 Amps 
- *      and for a 1700 mAh capacity battery, the charge rate should be 1.7 Amps
- *                1000 mAh                                             1.0 Amps
- *      
- *      Current Draw:
- *      3S 1000 mAh 20C LiPo pack, your safe max current draw would be 1000 mA x 20C = 20,000 mA or 20 A.
- *      1S 1000 mAh 15C                  -           -             -   1000 mA x 15C = 15,000 mA or 15 A
- *      
- *      
- *      
- *      !!!!! >>>> USING 5v Booster to power sensor & ESP32 Board  <<<< !!!!!!! *      
- *      
- *      So Current Draw for this Application:
- *      
- *      = 200 mA average from battery, 250 mA peak
- *      
- *      at voltage 3.7 v (Nominal)
- *      
- *      0.200 A * 3.7 v = 0.74 W
- *      
- *      = 5 h Operation time with no top up. Probably will not last the night
- *      
- *      Solar Panels:
- *      Small: 0.66 W
- *      Large: 0.87 W
- *      
- *      Large one should at least charge the battery during daylight hours.
- *      
- *      0.87 W / 5 v = 0.174 A or 174 mA avaliable from the large solar panel in direct sunlight. May have to measure on a cloudy day
- *      to find actual voltage output
- *      
- *       *    
- *      Using charge pump daughterboard that outputs 5v from the 3.7v LiPo Cell
- *      
- *      200 mA max draw from 5v output < 150 mA average
- *      
- *      Max 1 A draw from charge circuit, so this seems fine!
- *      
- *      1 A * 5v = 5 W power output max
- *      
- *      250 mA max draw from battery, 200 mA average.
- *      
- *      
- *      
- *      
- *      
- *      Measurements Required:
- *      
- *      Vcell =    // voltage of the  Battery cell  3.0 to 4.2 range
- *      
- *      Vpv =    // Voltage of the Photovoltaic Cell 0 to 5.2 v (Check this)
- *      
- *      
- *      These will both require voltage division in order to use the ADC on the microcontroller to detect the voltage.
- *      
- *      Microcontroller will be running on internal 3.3 v regulation, however this introduces inefficiency. 
- *      Running from the cell output directly may be viable, however it will require using the ADC internal reference.
- *      
- *      Internal Reference on Arduino = 1.1 v  (Check)
- *      
- *      Therefore voltage division will need to bring both Vcell & Vpv down to max 1.1 v
- *      
- *      1.1/1023 = 1.075x10^-3 v per division.  
- *      
- *      4.4/4 = 1.1 
- *      
- *      therefore
- *      
- *      voltage reading = 4.3 x 10^-3 v per division (translation) 0 to 1024
- *      
- *      This is the value to turn the result from the ADC back to a voltage readout.
- *      
- *      
- *      to divide a max of 4.4 v to 1.1 v for the internal reference voltage. 
- *      
- *      we need a voltage dividor of 1/4 and this needs to have as low a current draw as possible.
- *      
- *      if we use a 100k ohm resistor for the GND connection, then a 420k ohm resistor for the BATTERY (4.4 v max overvoltage)
- *      Using Calculator:
- *      
- *      33k ohm to +4.4 v 10k ohm to GND = Vout 1.023 v    0.2 mA Negligable 
- *      
- *           
- *      
- *      for the 5 v solar panel
- *      5 v to 1.1 v 
- *      
- *      33k ohm to +5v 8.2k ohm to GND = Vout 0.995 v    0.2 mA
- *      
- *      
- *      
- *      >>> Test Load Required <<<     
- *      
- *      Vin = 5v
- *      
- *      mA output = 200 mA
- *      
- *      R = V/I
- *      
- *      R = 5/0.2 
- *      
- *      R = 25 ohm     
- *      
- *      5 x 0.2 = 1 W Power 
- *      
- *      Assume I dont have 1 W resistors, better assume 1/4 W max so 25 ohm becomes 100 ohm
- *      
- *      5v / 100 ohm = 0.05 A not enough to really test the circuit but it will let me test
- *      the basic sketch
- *      
- *      
- *      
- */
+// >>> LiPo Cell Management System <<<
+
+
+/*
+
+   Outline of a script to measure and record the voltage of a 3.7 v
+   lipo cell with a 3.3v microcontroller.
+
+   Eventually will be used to manage the charging of the battery,
+   and recording the value into a database
+
+    This sketch uses the internal 1.1 v Reference of the arduino microcontroller,
+    accessed by setting:
+
+     analogReference(type)
+
+     to:
+     INTERNAL (ATmega328p)
+     INTERNAL1V1 (Arduino Mega)
+     INTERNAL2V56 (Arduno Mega)
+     EXTERNAL  (Voltage applied to AREF. Must not be based on Vcc!)
 
 
 
- /*
-  *     Required Functions:
-  *     
-  *     Battery Charging disconnect if over 4.2 v  (should be handled by daughterboard but may be worth reiterating
-  *     
-  *     Battery safety Disconnect if cell voltage drops under 3.1 v 
-  * 
-  * 
-  * 
-  */
+
+        >>> LiPo Cell Safety! <<<
+
+        Vmax = 4.20 v
+        Vmin = 3.00 v  (Maintain 3.2/3.3 for safety)
 
 
+        Cell Capacity:
+        1000 mAh
+
+        1000 mAh * 3.7 v (Nominal) = 3.7 Wh
+
+
+        Charging:
+
+        C rating Note:
+        As a general rule, you should charge your batteries a current of 1C.
+        So, for a 2200 mAh capacity battery, the charge rate should be 2.2 Amps
+        and for a 1700 mAh capacity battery, the charge rate should be 1.7 Amps
+                  1000 mAh                                             1.0 Amps
+
+        Current Draw:
+        3S 1000 mAh 20C LiPo pack, your safe max current draw would be 1000 mA x 20C = 20,000 mA or 20 A.
+        1S 1000 mAh 15C                  -           -             -   1000 mA x 15C = 15,000 mA or 15 A
+
+
+
+        !!!!! >>>> USING 5v Booster to power sensor & ESP32 Board  <<<< !!!!!!!
+
+        So Current Draw for this Application:
+
+        = 200 mA average from battery, 250 mA peak
+
+        at voltage 3.7 v (Nominal)
+
+        0.200 A * 3.7 v = 0.74 W    << Battery Capacity
+
+        = 5 h Operation time with no top up. Probably will not last the night
+
+
+        Solar Panels:
+        Small: 0.66 W
+        Large: 0.87 W
+
+        Large one should at least charge the battery during daylight hours.
+
+        0.87 W / 5 v = 0.174 A or 174 mA avaliable from the large solar panel in direct sunlight. May have to measure on a cloudy day
+        to find actual voltage output
+
+
+
+        Using charge pump daughterboard that outputs 5v from the 3.7v LiPo Cell
+
+        200 mA max draw from 5v output < 150 mA average
+
+        Max 1 A draw from charge circuit, so this seems fine!
+
+        1 A * 5v = 5 W power output max
+
+        250 mA max draw from battery, 200 mA average.
+
+
+
+
+
+        Measurements Required:
+
+        Vcell =    // voltage of the  Battery cell  3.0 to 4.2 range
+
+        Vpv =    // Voltage of the Photovoltaic Cell 0 to 5.2 v (Check this)
+
+
+        These will both require voltage division in order to use the ADC on the microcontroller to detect the voltage.
+
+        Microcontroller will be running on internal 3.3 v regulation, however this introduces inefficiency.
+        Running from the cell output directly may be viable, however it will require using the ADC internal reference.
+
+        Internal Reference on Arduino = 1.1 v
+
+        Therefore voltage division will need to bring both Vcell & Vpv down to max 1.1 v
+
+        1.1/1023 = 1.075x10^-3 v per division.
+
+        4.4/4 = 1.1
+
+        therefore
+
+        voltage reading = 4.3 x 10^-3 v per division (translation) 0 to 1024
+
+        This is the value to turn the result from the ADC back to a voltage readout.
+
+
+        to divide a max of 4.4 v to 1.1 v for the internal reference voltage.
+
+        we need a voltage dividor of 1/4 and this needs to have as low a current draw as possible.
+
+        if we use a 100k ohm resistor for the GND connection, then a 420k ohm resistor for the BATTERY (4.4 v max overvoltage)
+        Using Calculator:
+
+        33k ohm to +4.4 v 10k ohm to GND = Vout 1.023 v   Current Draw =  0.2 mA Negligable
+
+
+
+        for the 5 v solar panel
+        5 v to 1.1 v
+
+        33k ohm to +5v 8.2k ohm to GND = Vout 0.995 v   Current Draw = 0.2 mA
+
+
+
+        >>> Test Load Required <<<
+
+        Vin = 5v
+
+        mA output = 200 mA
+
+        R = V/I
+
+        R = 5/0.2
+
+        R = 25 ohm
+
+        5 x 0.2 = 1 W Power
+
+        Assume I dont have 1 W resistors, better assume 1/4 W max so 25 ohm becomes 100 ohm
+
+        5v / 100 ohm = 0.05 A not enough to really test the circuit but it will let me test
+        the basic sketch
+
+
+
+*/
+
+
+
+/*
+
+       Required Functions:
+
+       Battery Charging disconnect if over 4.2 v  (should be handled by daughterboard but may be worth reiterating
+
+       Battery safety Disconnect if cell voltage drops under 3.1 v
+
+
+
+*/
+
+
+
+//--------------------------------------------------### OLED Variables & Settings ###--------------------------
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#include <Fonts/FreeMonoBold12pt7b.h >
+#include <Fonts/FreeSansBold12pt7b.h >
+#include <Fonts/FreeSansBold9pt7b.h >
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+#define OLED_ADDR   0x3C
+Adafruit_SSD1306 display(-1);
 
 // ~~~~~~~~~~~~ Input Pins ~~~~~~~~~~~~~~~~~
 
 const int batteryPin = A7;
 
+const int solarcellPin = A6;
+
 
 
 // ~~~~~~~~~~~ Maths Variables ~~~~~~~~~~~~~~~~
 
+// -----------Battery / Cell Variables----------
 // Min and Max Voltages for Battery
-int Vmax = 4200;     // Multiplied by 100 to avoid float numbers
-int Vmin = 3200;     
+float battVmax = 4.20;
+float battVmin = 3.20;
 
-int Vbatt;   // int to hold the current measured voltage after calculations
+float battVcc;   // Value to hold the current measured voltage after calculations
 
-float Vdisplay;  int Vbatt value / 100 for printing to the display
+float battVdisplay;  // Printed value for monitor
 
-int Vreading;   // measured value from A7 pin. Between 0 - 1023 Need an algorithm to turn this into Vbatt.
+int battVreading;   // measured value from A7 pin. Between 0 - 1023 Need an algorithm to turn this into Vbatt.
+
+
+float battVscaler =  0.001075269;  // 1.075x10^-3    //  This produces a result that is about 0.2 v low
+
+// Is this a linear offset from the actual voltage, or is this something that requires a correction factor.
+
+/* This offset is probably due to tolerances of the resistors in the Voltage Divider
+
+    I think the only real solution to this requires more maths,
+
+    I need to measure the discrepancy at 3.2v and at 4.2v
+
+    and see if it is a linear offset.
+
+
+             >>> Results <<<
+
+             Actual Battery Voltage:    |     Printed Value:
+             ________________________________________________
+
+   Reading taken with USB power
+                                                           << Invalid
+                      3.869             |         3.64
+                      3.845             |         3.61
+                      3.823             |         3.535
+
+  Readings takens post USB Power:
+
+                      3.805             |         3.553
+                      3.778             |         3.531
+                      3.764             |         3.514
+                      3.750             |         3.510
+                      3.736             |         3.505
 
 
 
-float Vscaler;   // float value used to scale Vreading to Vbatt
 
-float Voffset;   // offset value if required.
+
+*/
+
+float battVcal = 0.0;   // Offset/Calibration value if required.
+
+
+// -----------Solar PV Variables----------
+
+float solarVmax = 5.5;    // guessing, needs to be measured
+
+float solarVmin = 0.0;
+
+
+float solarVcc;   // Value to hold the current measured voltage after calculations
+
+float solarVdisplay;  // Printed value for monitor
+
+int solarVreading;   // measured value from A7 pin. Between 0 - 1023 Need an algorithm to turn this into solarVcc.
+
+float solarVscaler =  0.001075269;   //  Probably not required at all. however offset or cal factor will be required
+
+
+
+float solarVcal = 0.0;   // Offset/Calibration for solarPV readings if required
+
 
 
 
 void setup() {
 
-pinMode(batteryPin, INPUT);
+  Serial.begin(115200);
 
-// Set Up internal Reference of 1.1v
+  pinMode(batteryPin, INPUT);
+  pinMode(solarcellPin, INPUT);
 
+  // Set Up internal Reference of 1.1v
+  analogReference(INTERNAL);
+
+  OLEDsetupSimple();
+
+  for (int i = 0; i < 5; i++) {
+
+    delay (100);
+    int p = analogRead(batteryPin);    // used to stabalise analogRead, int not
+    int q = analogRead(solarcellPin);    // used to stabalise analogRead, int
+    // used after this point
+  }
+
+  // display.setFont(&FreeSansBold9pt7b);
+  display.setFont();
 }
 
-
+bool printSerial = false;
 
 void loop() {
 
-// read batteryPin
 
 
-// Convert value to Vbatt
+  // read analog pins
+
+  battVreading = analogRead(batteryPin);     // int 0 - 1023
+
+  solarVreading = analogRead(solarcellPin);
 
 
-// Convert to a value to display and Print to Screen
+  Serial.println(" ");
+  Serial.print("Initial Analog Reads: ");
+  Serial.print("   Battery: ");
+  Serial.print(battVreading);
 
+
+  Serial.print("        Solar PV Cell: ");
+  Serial.print(solarVreading);
+
+
+  Serial.println(" ");
+
+  // Convert Values to actual measured volts between 0 - 1.1v
+
+
+  battVcc = battVreading * battVscaler;     // This gives the true measured voltage from 0 to 1.1 v.
+
+  // add calibration offset or factor here
+
+  // >>>>>>>    battVcc = battVcc + battVcal;  OR battVcc = battVcc * battVcal;
+
+  // Convert solarPV Value to Vsolar
+
+  solarVcc = solarVreading * solarVscaler;   // gives true voltage reading from 0 - 1.1v
+
+  // add calibration offset or factor here
+
+  // >>>>>>>    solarVcc = solarVcc + solarVcal;  OR solarVcc = solarVcc * solarVcal;
+
+
+  Serial.println(" ");
+  Serial.print("Applying Scaler: ");
+  Serial.print("        Battery: ");
+  Serial.print(battVcc);
+  Serial.print(" v ");
+
+  Serial.print("    Solar PV Cell: ");
+  Serial.print(solarVcc);
+  Serial.print(" v ");
+
+  Serial.println(" ");
+
+
+
+
+  // Convert values from the voltage divison, max approx 1.1v back to their true values
+
+  battVcc = battVcc * 4.0;   // batt needs to be multiplied by 4 to give the true battery voltage of 0 - 4.4 v
+
+  solarVcc = solarVcc * 5.0; // solar PV cell max voltage is 5 -5.5v  - calibration required
+
+
+
+
+  // Convert to a value to display and Print to Screen // Not really useful right now but might be used later for different purposes.
+  battVdisplay =  battVcc;
+
+  solarVdisplay = solarVcc;
+
+
+  // Display Functions
+  display.clearDisplay();
+
+  display.setTextColor(1, 0);
+
+
+  display.setCursor(0, 0);
+  display.print("LiPo Cell: ");
+  display.print(battVdisplay, 3);
+  display.print(" v ");
+
+  display.setCursor(23, 23);
+  display.print("Solar PV: ");
+  display.print(solarVdisplay, 3);
+  display.print(" v ");
+
+  display.display();
+
+
+  // Serial Printing for Testing Purposes
+
+  Serial.println(" ");
+  Serial.print("Calculated Voltages: ");
+
+  Serial.print("    Battery: ");
+  Serial.print(battVdisplay, 4);
+  Serial.print(" v ");
+
+  Serial.print("  Solar PV Cell: ");
+  Serial.print(solarVdisplay, 4);
+  Serial.print(" v ");
+
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+
+
+
+  // Delay Functions
+  delay(1000);
 
 }
+
