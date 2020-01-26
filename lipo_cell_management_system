@@ -243,6 +243,11 @@ float battVscaler =  0.001075269;  // 1.075x10^-3    //  This produces a result 
                       3.736             |         3.505
                       3.703             |         3.462
                       3.685             |         3.467
+                      3.620             |         3.415
+                      
+                      Screen Does not seem to boot under 3.6 v
+                      
+                      
                       
 
 
